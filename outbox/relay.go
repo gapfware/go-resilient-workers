@@ -150,6 +150,11 @@ func (r *Relay) Flush(ctx context.Context) (int, error) {
 		blocked   = make(map[string]bool)
 	)
 
+	// Use a context that survives cancellation: records already sent must
+	// be recorded, or they will be published again.
+	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+	defer cancel()
+
 	for _, rec := range recs {
 		key := string(rec.Key)
 		if (key != "" && blocked[key]) || ctx.Err() != nil {
@@ -158,10 +163,16 @@ func (r *Relay) Flush(ctx context.Context) (int, error) {
 		}
 
 		if err := r.publisher.Publish(ctx, rec); err != nil {
+			// Interrupted by shutdown: not a broker failure, so do not burn an
+			// attempt or back the record off; release it for the next relay.
+			if ctx.Err() != nil {
+				skipped = append(skipped, rec.ID)
+				continue
+			}
 			retryIn := r.retryDelay(rec.Attempts + 1)
 			pe := &PublishError{Record: rec, Err: err, RetryIn: retryIn}
 			r.onError(pe)
-			if merr := r.store.MarkFailed(ctx, rec.ID, err, retryIn); merr != nil {
+			if merr := r.store.MarkFailed(finishCtx, rec.ID, err, retryIn); merr != nil {
 				errs = append(errs, fmt.Errorf("outbox: mark failed %s: %w", rec.ID, merr))
 			}
 			if key != "" {
@@ -171,11 +182,6 @@ func (r *Relay) Flush(ctx context.Context) (int, error) {
 		}
 		published = append(published, rec.ID)
 	}
-
-	// Use a context that survives cancellation: records already sent must
-	// be recorded, or they will be published again.
-	finishCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
-	defer cancel()
 
 	if len(published) > 0 {
 		if err := r.store.MarkPublished(finishCtx, published...); err != nil {

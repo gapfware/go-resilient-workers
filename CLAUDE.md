@@ -62,8 +62,8 @@ examples/      provisioning (no infra), kafka-postgres end-to-end (TODO)
 ## Current status
 
 Implemented and passing `go test -race ./...`: `retry`, `idempotency`,
-`worker`, `offsets`, `memory` (no tests yet). Written but untested:
-`outbox` (interfaces, `Relay`, `MemoryStore`). Everything else is open in the
+`worker`, `offsets`, `outbox` (interfaces, `Relay`, `MemoryStore`), `memory`
+(no tests yet). Everything else is open in the
 issues (see ISSUES.md / GitHub issues). Issues labelled `starter-code` are
 already implemented: review, fill gaps against the acceptance criteria, close.
 
