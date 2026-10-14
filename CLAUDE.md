@@ -54,7 +54,7 @@ idempotency/   Store interface + MemoryStore (lease / complete / release, Sweep)
 worker/        Worker runtime, options, errors (Permanent, RetryAfter, PanicError), Observer, Stats, SlogObserver
 memory/        in-memory Queue (Source) and DeadLetterQueue for tests/examples
 offsets/       Tracker for contiguous commits on partitioned logs
-outbox/        Record/Store/Publisher, Relay, MemoryStore; outbox/postgres (TODO)
+outbox/        Record/Store/Publisher, Relay, MemoryStore; outbox/outboxtest (Store conformance suite); outbox/postgres (Store on database/sql)
 kafka/         separate module: Source, Publisher, DeadLetter (TODO)
 examples/      provisioning (no infra), kafka-postgres end-to-end (TODO)
 ```
@@ -62,7 +62,7 @@ examples/      provisioning (no infra), kafka-postgres end-to-end (TODO)
 ## Current status
 
 Implemented and passing `go test -race ./...`: `retry`, `idempotency`,
-`worker`, `offsets`, `outbox` (interfaces, `Relay`, `MemoryStore`), `memory`
+`worker`, `offsets`, `outbox` (interfaces, `Relay`, `MemoryStore`, `postgres`), `memory`
 (no tests yet). Everything else is open in the
 issues (see ISSUES.md / GitHub issues). Issues labelled `starter-code` are
 already implemented: review, fill gaps against the acceptance criteria, close.
@@ -91,5 +91,5 @@ go test -race ./...                                   # core
 DATABASE_URL=postgres://postgres@localhost:5432/postgres?sslmode=disable \
   go test -race -tags integration ./outbox/...        # Postgres store
 cd kafka && KAFKA_BROKERS=localhost:9092 go test -race -tags integration ./...
-docker compose up -d                                  # Kafka (KRaft) + Postgres for local runs
+POSTGRES_PORT=5433 docker compose up -d                  # (port override if 5432 is taken) Kafka (KRaft) + Postgres for local runs
 ```
